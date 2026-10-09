@@ -1,9 +1,8 @@
 #ifndef EXECUTOR_H
 #define EXECUTOR_H
 
-#include <string>
-#include <vector>
+#include "../command.h"
 
-void executeCommand(std::vector<std::string> tokens);
+void executeCommand(const Command& command);
 
 #endif
