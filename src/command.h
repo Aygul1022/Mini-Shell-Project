@@ -12,5 +12,7 @@ struct Command {
 
     bool appendOutput = false;
 };
-
+struct Pipeline {
+    std::vector<Command> commands;
+};
 #endif
