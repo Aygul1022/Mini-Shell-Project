@@ -1,8 +1,9 @@
+#include "tokenizer.h"
+
 #include <iostream>
 #include <string>
 #include <vector>
 
-std::vector<std::string> tokenize(const std::string& input);
 
 int main() {
 std::vector<std::string> testInputs = {

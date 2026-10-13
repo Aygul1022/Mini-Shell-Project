@@ -4,71 +4,20 @@
 #include <string>
 #include <vector>
 
+
 std::vector<std::string> tokenize(const std::string& input) {
-    std::vector<std::string> tokens;
-    std::string currentToken;
-    bool insideSingleQuotes = false;
-    bool insideQuotes = false;
-    bool tokenStarted = false;
+    TokenizeResult result = tokenizeWithTypes(input);
+    std::vector<std::string> texts;
 
-    for (std::size_t i = 0; i < input.size(); ++i) {
-        char ch = input[i];
-        if (ch == '\'' && !insideQuotes) {
-    insideSingleQuotes = !insideSingleQuotes;
-    tokenStarted = true;
-    continue;
-}
-
-        if (ch == '"' && !insideSingleQuotes) {
-    insideQuotes = !insideQuotes;
-    tokenStarted = true;
-    continue;
-}
-
-        if ((ch == ' ' || ch == '\t') && !insideQuotes && !insideSingleQuotes) {
-            if (!currentToken.empty() || tokenStarted) {
-                tokens.push_back(currentToken);
-                currentToken.clear();
-                tokenStarted = false;
-            }
-        } else if (!insideQuotes && !insideSingleQuotes && (ch == '|' || ch == '>' || ch == '<' || ch == '&')) {
-           if (ch == '>' && i + 1 < input.size() && input[i + 1] == '>') {
-    if (!currentToken.empty() || tokenStarted) {
-    tokens.push_back(currentToken);
-    currentToken.clear();
-    tokenStarted = false;
-}
-tokens.push_back(">>");
-    ++i;
-    continue;
-}
-    if (!currentToken.empty() || tokenStarted) {
-    tokens.push_back(currentToken);
-    currentToken.clear();
-    tokenStarted = false;
-}
-tokens.push_back(std::string(1, ch));
-} else {
-    currentToken += ch;
-    tokenStarted = true;
-}
+    if (!result.success) {
+        return {};
     }
 
-    if (insideQuotes) {
-    std::cerr << "Error: Unclosed double quote." << '\n';
-    return {};
-}
+    for (const Token& token : result.tokens) {
+        texts.push_back(token.text);
+    }
 
-    if (insideSingleQuotes) {
-    std::cerr << "Error: Unclosed single quote." << '\n';
-    return {};
-}
-
-    if (!currentToken.empty() || tokenStarted) {
-    tokens.push_back(currentToken);
-}
-
-return tokens;
+    return texts;
 }
 
 
@@ -127,25 +76,17 @@ TokenizeResult tokenizeWithTypes(const std::string& input) {
     }
 
         if (insideDoubleQuotes) {
-        std::cerr << "Error: Unclosed double quote." << '\n';
-        return {{}, false};
-    }
+    return {{}, false, "Error: Unclosed double quote."};
+}
 
     if (insideSingleQuotes) {
-    std::cerr << "Error: Unclosed single quote." << '\n';
-    return {{}, false};
+    return {{}, false, "Error: Unclosed single quote."};
 }
 
     if (tokenStarted) {
         tokens.push_back({currentToken, TokenType::Word});
     }
 
-    return {tokens, true};
+  return {tokens, true, ""};
 }
 
-
-
-
-TokenizeResult tokenizeCommand(const std::string& input) {
-    return tokenizeWithTypes(input);
-}

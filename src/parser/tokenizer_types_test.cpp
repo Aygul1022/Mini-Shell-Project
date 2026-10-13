@@ -102,7 +102,11 @@ std::vector<std::string> unclosedQuoteInputs = {
 for (std::size_t i = 0; i < unclosedQuoteInputs.size(); ++i) {
     TokenizeResult result = tokenizeWithTypes(unclosedQuoteInputs[i]);
 
-if (!result.success && result.tokens.empty()) {
+if (!result.success &&
+    result.tokens.empty() &&
+    result.error == (i == 0
+        ? "Error: Unclosed double quote."
+        : "Error: Unclosed single quote.")) {
         std::cout << "PASS: Unclosed quote test " << i + 1 << '\n';
     } else {
         std::cout << "FAIL: Unclosed quote test " << i + 1 << '\n';
