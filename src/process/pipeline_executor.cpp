@@ -20,13 +20,13 @@ std::vector<char*> buildArgs(const Command& command) {
 
 void executePipeline(const Pipeline& pipeline) {
     if (pipeline.commands.empty()) {
-        std::cerr << "Pipeline bos olamaz." << std::endl;
+        std::cerr << "Pipeline can not be empty" << std::endl;
         return;
     }
 
     for (const auto& command : pipeline.commands) {
         if (command.args.empty()) {
-            std::cerr << "Bos komut calistirilamaz." << std::endl;
+            std::cerr << "Empty command can not be executed." << std::endl;
             return;
         }
     }
@@ -43,7 +43,7 @@ void executePipeline(const Pipeline& pipeline) {
 
         if (hasNextCommand) {
             if (pipe(pipefd) == -1) {
-                std::cerr << "pipe() basarisiz!" << std::endl;
+                std::cerr << "pipe() failed!" << std::endl;
 
                 if (previousReadFd != -1) {
                     close(previousReadFd);
@@ -60,7 +60,7 @@ void executePipeline(const Pipeline& pipeline) {
         pid_t pid = fork();
 
         if (pid < 0) {
-            std::cerr << "fork() basarisiz!" << std::endl;
+            std::cerr << "fork() failed!" << std::endl;
 
             if (previousReadFd != -1) {
                 close(previousReadFd);
@@ -81,7 +81,7 @@ void executePipeline(const Pipeline& pipeline) {
         if (pid == 0) {
             if (previousReadFd != -1) {
                 if (dup2(previousReadFd, STDIN_FILENO) == -1) {
-                    std::cerr << "stdin dup2() basarisiz!"
+                    std::cerr << "stdin dup2() failed!"
                               << std::endl;
                     _exit(1);
                 }
@@ -89,7 +89,7 @@ void executePipeline(const Pipeline& pipeline) {
 
             if (hasNextCommand) {
                 if (dup2(pipefd[1], STDOUT_FILENO) == -1) {
-                    std::cerr << "stdout dup2() basarisiz!"
+                    std::cerr << "stdout dup2() failed!"
                               << std::endl;
                     _exit(1);
                 }
@@ -109,7 +109,7 @@ void executePipeline(const Pipeline& pipeline) {
 
             execvp(args[0], args.data());
 
-            std::cerr << "Komut calistirilamadi: "
+            std::cerr << "Command execution failed: "
                       << pipeline.commands[i].args[0]
                       << std::endl;
 

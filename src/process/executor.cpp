@@ -8,6 +8,11 @@
 #include <sys/wait.h>
 
 void executeCommand(const Command& command) {
+    if (command.args.empty()) {
+        std::cerr << "Empty command cannot be executed." << std::endl;
+        return;
+    }
+
     std::vector<char*> args;
 
     for (const auto& item : command.args) {
@@ -19,7 +24,7 @@ void executeCommand(const Command& command) {
     pid_t pid = fork();
 
     if (pid < 0) {
-        std::cerr << "fork() basarisiz!" << std::endl;
+        std::cerr << "fork() failed!" << std::endl;
         return;
     }
 
@@ -33,12 +38,12 @@ void executeCommand(const Command& command) {
             );
 
             if (inputFd == -1) {
-                std::cerr << "Input dosyasi acilamadi!" << std::endl;
+                std::cerr << "Failed to open Input file!" << std::endl;
                 _exit(1);
             }
 
             if (dup2(inputFd, STDIN_FILENO) == -1) {
-                std::cerr << "Input dup2() basarisiz!" << std::endl;
+                std::cerr << "Input dup2() failed!" << std::endl;
                 close(inputFd);
                 _exit(1);
             }
@@ -64,12 +69,12 @@ void executeCommand(const Command& command) {
             );
 
             if (outputFd == -1) {
-                std::cerr << "Output dosyasi acilamadi!" << std::endl;
+                std::cerr << "Failed to open Output file!" << std::endl;
                 _exit(1);
             }
 
             if (dup2(outputFd, STDOUT_FILENO) == -1) {
-                std::cerr << "Output dup2() basarisiz!" << std::endl;
+                std::cerr << "Output dup2() failed!" << std::endl;
                 close(outputFd);
                 _exit(1);
             }
@@ -79,7 +84,7 @@ void executeCommand(const Command& command) {
 
         execvp(args[0], args.data());
 
-        std::cerr << "Komut calistirilamadi: "
+        std::cerr << "Command Execution Failed: "
                   << command.args[0] << std::endl;
 
         _exit(127);
