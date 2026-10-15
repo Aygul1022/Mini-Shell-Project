@@ -55,12 +55,40 @@ ParseResult parseCommandLine(const std::string &input)
             continue;
         }
 
+        if (token.text == "|")
+        {
+            if (command.args.empty())
+            {
+                return {{}, false, "Missing command before pipe."};
+            }
+
+            result.pipeline.commands.push_back(command);
+            command = Command{};
+            continue;
+        }
+
+        if (token.text == "&")
+        {
+            if (i != tokenResult.tokens.size() - 1)
+            {
+                return {{}, false, "Background operator must be at the end."};
+            }
+
+            if (command.args.empty())
+            {
+                return {{}, false, "Missing command before background operator."};
+            }
+
+            result.pipeline.background = true;
+            continue;
+        }
+
         return {{}, false, "Operator parsing is not implemented yet."};
     }
 
     if (command.args.empty())
     {
-        return {{}, false, "Missing command."};
+        return {{}, false, "Missing command after pipe or redirection."};
     }
 
     result.pipeline.commands.push_back(command);
