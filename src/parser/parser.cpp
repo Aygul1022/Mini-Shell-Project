@@ -41,6 +41,11 @@ ParseResult parseCommandLine(const std::string &input)
 
             const std::string &filename = tokenResult.tokens[i + 1].text;
 
+            if (filename.empty())
+            {
+                return {{}, false, "Empty filename after redirection operator."};
+            }
+
             if (token.text == "<")
             {
                 command.inputFile = filename;
@@ -83,7 +88,7 @@ ParseResult parseCommandLine(const std::string &input)
             continue;
         }
 
-        return {{}, false, "Operator parsing is not implemented yet."};
+        return {{}, false, "Unknown operator."};
     }
 
     if (command.args.empty())

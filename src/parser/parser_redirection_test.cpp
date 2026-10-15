@@ -67,5 +67,40 @@ int main()
         std::cout << "FAIL: Append redirection" << '\n';
         return 1;
     }
+
+    std::vector<std::string> missingFilenameInputs = {
+        "cat <",
+        "echo hello >>"};
+
+    for (const std::string &input : missingFilenameInputs)
+    {
+        ParseResult invalid = parseCommandLine(input);
+
+        if (!invalid.success && !invalid.error.empty())
+        {
+            std::cout << "PASS: Missing redirection filename - "
+                      << input << '\n';
+        }
+        else
+        {
+            std::cout << "FAIL: Missing redirection filename - "
+                      << input << '\n';
+            return 1;
+        }
+    }
+
+    ParseResult emptyFilename = parseCommandLine("echo hi > ''");
+
+    if (!emptyFilename.success &&
+        emptyFilename.error == "Empty filename after redirection operator.")
+    {
+        std::cout << "PASS: Empty redirection filename" << '\n';
+    }
+    else
+    {
+        std::cout << "FAIL: Empty redirection filename" << '\n';
+        return 1;
+    }
+
     return 0;
 }
