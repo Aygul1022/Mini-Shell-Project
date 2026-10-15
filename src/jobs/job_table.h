@@ -103,6 +103,21 @@ public:
         return false;
     }
 
+    void removeDoneJobs()
+    {
+        for (auto it = jobs.begin(); it != jobs.end();)
+        {
+            if (it->status == JobStatus::Done)
+            {
+                it = jobs.erase(it);
+            }
+            else
+            {
+                ++it;
+            }
+        }
+    }
+
     void listJobs() const
     {
         for (const Job &job : jobs)
