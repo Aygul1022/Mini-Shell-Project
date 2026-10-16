@@ -2,15 +2,15 @@
 
 Current scope is **Parser-only dispatch** below. All subsequent development sections are historical records; their build commands and expectations may be superseded.
 
-**Current prerequisite:** merge the teammate changes providing `src/command.h` and `src/parser/` before building. Teammate files remain absent, and no merge has been performed. Process/executor sources are not required for the current parser-only scope.
+**Current prerequisite satisfied (2026-10-16):** merge commit `61806c9` brings the shared interface and parser into `ayguldev`. The required source files are present. Process/executor sources are not required for the current parser-only scope.
 
 ## Parser-only dispatch — current scope
 
 At the user's explicit request, executor includes and calls were removed. Input is sent to `parseCommandLine(input)`; syntax errors are printed and empty results skipped. The dispatcher checks arguments before using `command.args[0]`, then routes cd, pwd, help, and exit. The temporary cd splitter remains removed. All external commands, pipelines, redirection, and background requests report that executor integration is pending, before any built-in side effect occurs. Help describes this scope.
 
-Status: **Runtime tests blocked until parser dependencies are merged**. No teammate implementation was re-added. Existing historical test results do not establish that this integration works.
+Status: **Passed — user-pasted Ubuntu build and runtime results, 2026-10-16**. Dependencies are present through merge commit `61806c9`. The combined C++17 build with `-Wall -Wextra -Wpedantic` printed `Build passed` with no visible compiler diagnostics. Running `python3 tests/parser_integration_test.py /tmp/minishell-parser-test` reported `Ran 9 tests in 0.027s` and `OK`. This verifies the current parser-only integration, including rejection of executor features; it does not establish external execution, pipes, redirection, or background-job execution.
 
-Approved structural refactor: the built-in handlers and routing now live in `src/builtins/builtins.cpp`, with the public declaration in `src/builtins/builtins.h`. `main.cpp` retains the input loop, parser call, and pipeline restrictions. `dispatchBuiltin()` returns NotBuiltin, Handled, or ExitRequested; Handled does not imply command success. ExitRequested tells the main loop to stop. No child process is introduced, so cd still changes the shell's working directory. The existing nine regression tests apply unchanged; their post-refactor runtime status remains blocked by missing parser dependencies.
+Approved structural refactor: the built-in handlers and routing now live in `src/builtins/builtins.cpp`, with the public declaration in `src/builtins/builtins.h`. `main.cpp` retains the input loop, parser call, and pipeline restrictions. `dispatchBuiltin()` returns NotBuiltin, Handled, or ExitRequested; Handled does not imply command success. ExitRequested tells the main loop to stop. No child process is introduced, so cd still changes the shell's working directory. The nine regression tests passed against this layout in the user's Ubuntu environment.
 
 After merging the parser/shared interface, run from Ubuntu Bash in the project directory:
 
