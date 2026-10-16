@@ -65,7 +65,8 @@ void printHelp(){
          << "  Quote paths containing spaces: cd \"My Folder\"\n"
          << "  help, pwd, and exit accept no arguments.\n"
          << "  Variable expansion, ~ expansion, and escaping are unavailable.\n"
-         << "  External commands, pipelines, redirection, and background execution\n"
+         << "  Single foreground programs are supported: ls, echo hello, sleep 1.\n"
+         << "  Pipelines, redirection, and background execution\n"
          << "  await executor integration and are rejected for now.\n";
 }
 

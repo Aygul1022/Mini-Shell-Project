@@ -3,6 +3,7 @@ import pathlib
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 
@@ -57,14 +58,30 @@ class ParserIntegrationTests(unittest.TestCase):
                     self.assertIn("executor integration", errors)
                     self.assertFalse((pathlib.Path(directory) / "output.txt").exists())
 
-    def test_external_rejection_and_recovery(self):
+    def test_external_execution_and_recovery(self):
         with tempfile.TemporaryDirectory() as directory:
             output, errors = self.run_shell(
-                "echo hello\nminishell_nonexistent_command_72519\npwd\nexit\n", directory,
+                'echo "hello world"\nminishell_nonexistent_command_72519\npwd\nexit\n', directory,
             )
-            self.assertEqual(output.splitlines(), [str(pathlib.Path(directory).resolve())])
-            self.assertEqual(errors.count("awaits executor integration"), 2)
+            self.assertEqual(output.splitlines(), ["hello world", str(pathlib.Path(directory).resolve())])
             self.assertIn("minishell_nonexistent_command_72519", errors)
+
+    def test_foreground_wait(self):
+        with tempfile.TemporaryDirectory() as directory:
+            started = time.monotonic()
+            output, errors = self.run_shell("sleep 1\npwd\nexit\n", directory)
+            self.assertGreaterEqual(time.monotonic() - started, 0.9)
+            self.assertEqual(output.splitlines(), [str(pathlib.Path(directory).resolve())])
+            self.assertEqual(errors, "")
+
+    def test_external_inherits_changed_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = pathlib.Path(directory) / "child"
+            target.mkdir()
+            (target / "marker.txt").write_text("marker")
+            output, errors = self.run_shell("cd child\nls\nexit\n", directory)
+            self.assertEqual(output.splitlines(), ["marker.txt"])
+            self.assertEqual(errors, "")
 
     def test_external_pipeline(self):
         with tempfile.TemporaryDirectory() as directory:

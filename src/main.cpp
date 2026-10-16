@@ -2,6 +2,7 @@
 #include <string>
 #include "parser/parser.h"
 #include "builtins/builtins.h"
+#include "process/executor.h"
 
 using namespace std;
 
@@ -40,8 +41,8 @@ bool dispatchPipeline(const Pipeline& pipeline){
     if(result == BuiltinResult::Handled){
         return false;
     }
-    cerr << "mini-shell: external command execution awaits executor integration: "
-         << name << endl;
+    cout.flush();
+    executeCommand(command);
     return false;
 }
 

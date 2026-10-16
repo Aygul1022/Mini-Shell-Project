@@ -1,6 +1,22 @@
 # Mini Shell test record
 
-Current scope is **Parser-only dispatch** below. All subsequent development sections are historical records; their build commands and expectations may be superseded.
+Current scope is **Foreground integration draft** below. Subsequent development sections are historical records; their build commands and expectations may be superseded.
+
+## Foreground integration draft — 2026-10-16
+
+Branch: `feature/executeCommandandtest`. Proposed PR target: `feature/process-execution`, which supplies Sami's executor through Git integration. No teammate files are copied into this branch. Single foreground external commands now call `executeCommand(command)` after built-in dispatch. Built-ins remain in the parent shell. Pipelines, redirection, and background execution remain rejected for this bounded step.
+
+Status: **Combined build/runtime tests not run; local executor dependency absent**. The earlier nine passing tests apply to parser-only behavior, not this change. The suite now contains eleven tests: external execution with quotes and unknown-program recovery replaces rejection, plus foreground waiting and inherited-directory coverage. The draft must not be treated as ready to merge into main until the combined code is tested in Ubuntu.
+
+In a checkout containing both branches' code, run from Ubuntu Bash:
+
+```bash
+g++ -std=c++17 -Wall -Wextra -Wpedantic src/main.cpp src/builtins/builtins.cpp src/parser/parser.cpp src/parser/tokenizer.cpp src/process/executor.cpp -o /tmp/minishell-foreground-test && python3 tests/parser_integration_test.py /tmp/minishell-foreground-test
+```
+
+Expected: eleven test methods pass with `OK`. Also manually launch `/tmp/minishell-foreground-test`, enter `sleep 2`, and verify that the next prompt appears only after completion. The automated elapsed-time check is supporting evidence, not a direct observation of prompt timing.
+
+Notes for Sami: confirm the `void executeCommand(const Command&)` contract; fork/exec occur in the executor and waitpid in its parent path. The current API does not propagate child exit status. This PR intentionally does not enable the executor's redirection path or pipeline executor. Review inherited shell/parser work as well as the new dispatch call; the PR target is the executor feature branch, not main.
 
 **Current prerequisite satisfied (2026-10-16):** merge commit `61806c9` brings the shared interface and parser into `ayguldev`. The required source files are present. Process/executor sources are not required for the current parser-only scope.
 
