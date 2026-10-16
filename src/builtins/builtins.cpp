@@ -66,11 +66,20 @@ void printHelp(){
          << "  help, pwd, and exit accept no arguments.\n"
          << "  Variable expansion, ~ expansion, and escaping are unavailable.\n"
          << "  Single foreground programs are supported: ls, echo hello, sleep 1.\n"
-         << "  Pipelines, redirection, and background execution\n"
+         << "  External redirection: cat < input.txt, echo hi > output.txt\n"
+         << "  Append output: echo hi >> output.txt\n"
+         << "  Redirection for built-ins is not supported yet.\n"
+         << "  Foreground external pipelines: echo hello | cat | wc -c\n"
+         << "  Built-ins in pipelines are not supported yet.\n"
+         << "  Redirection within pipelines and background execution\n"
          << "  await executor integration and are rejected for now.\n";
 }
 
 } // namespace
+
+bool isBuiltin(const string& name){
+    return name == "cd" || name == "pwd" || name == "help" || name == "exit";
+}
 
 BuiltinResult dispatchBuiltin(const vector<string>& args){
     if(args.empty()){

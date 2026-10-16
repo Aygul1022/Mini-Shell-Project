@@ -1,12 +1,48 @@
 # Mini Shell test record
 
-Current scope is **Foreground integration draft** below. Subsequent development sections are historical records; their build commands and expectations may be superseded.
+Current scope is **Foreground external pipelines** below. Subsequent development sections are historical records; their build commands and expectations may be superseded.
+
+## Foreground external pipelines — 2026-10-16
+
+Approved scope: dispatch parsed multi-command foreground pipelines to Sami's existing `executePipeline()`. Every stage is validated before any process starts. Empty command names, built-ins in pipelines, and pipeline redirection are rejected. Background execution remains rejected. Sami's pipeline executor is unchanged; it does not implement redirection fields.
+
+Status: **Passed — user-pasted Ubuntu build and runtime output, 2026-10-16**. The documented build chained with `&&` reached the test runner, confirming successful compilation with no visible compiler diagnostics. The suite reported `Ran 17 tests in 1.971s` and `OK`. This verifies the tested foreground pipelines and existing regressions, including large output, missing-program recovery, and rejection before side effects. It does not validate pipeline redirection, built-ins in pipelines, or background execution. Python syntax validation and `git diff --check` also passed (Git emitted line-ending notices). WSL was not retried following the user's earlier declined access request.
+
+From Ubuntu Bash in the project directory:
+
+```bash
+g++ -std=c++17 -Wall -Wextra -Wpedantic src/main.cpp src/builtins/builtins.cpp src/parser/parser.cpp src/parser/tokenizer.cpp src/process/executor.cpp src/process/pipeline_executor.cpp -o /tmp/minishell-pipeline-test && python3 tests/parser_integration_test.py /tmp/minishell-pipeline-test
+```
+
+Expected: 17 tests and `OK`. The existing pipeline case now tests two and three stages with output `6` and a subsequent `echo done`. Three new methods test 100,000 lines flowing through a pipeline (exceeding ordinary pipe-buffer capacity), recovery after missing first/last programs, and validation of all stages before side effects. Each subprocess has a five-second timeout to expose hangs. Existing built-in, redirection, parser, and foreground tests remain included.
+
+For an interactive check, launch `/tmp/minishell-pipeline-test` from Bash. Inside mini-shell enter `echo hello | cat | wc -c`, `sleep 2 | cat`, `pwd`, and `exit`. Expect `6`, then a roughly two-second wait before the next prompt, a working-directory path, and return to Bash. This manual check is pending.
+
+Notes to keep: each pipe connects one child's stdout to the next child's stdin. Unused pipe ends must close so readers can observe EOF. All stages must start before waiting to avoid blocking a producer whose pipe buffer fills. The existing executor creates the stages and then waits; the dispatcher selects and validates the pipeline. Child exit-status propagation, built-ins in pipelines, pipeline redirection, and background jobs remain outside this checkpoint.
+
+## Single-command redirection — 2026-10-16
+
+Approved change on `feature/executeCommandandtest`: external foreground commands now pass their parser-provided input/output/append fields to the existing executor. `isBuiltin()` classifies built-ins without running them, allowing the dispatcher to reject their redirection before side effects. Pipelines and background execution remain deferred. Sami's executor source is unchanged.
+
+Status: **Passed — user-pasted Ubuntu build and test output, 2026-10-16**. The documented compilation command chained with `&&` reached the test runner, confirming a successful build; no compiler diagnostics were visible. The suite reported `Ran 14 tests in 1.178s` and `OK`. This validates the tested single-command redirection behavior and regressions, not pipeline or background execution. Agent Python syntax validation found 14 test methods; `git diff --check` passed (Git emitted line-ending conversion notices). WSL execution was not retried following the earlier declined access request.
+
+From Ubuntu Bash in the project directory:
+
+```bash
+g++ -std=c++17 -Wall -Wextra -Wpedantic src/main.cpp src/builtins/builtins.cpp src/parser/parser.cpp src/parser/tokenizer.cpp src/process/executor.cpp -o /tmp/minishell-redirection-test && python3 tests/parser_integration_test.py /tmp/minishell-redirection-test
+```
+
+Expected: 14 tests and `OK`. The existing redirection test now verifies `>` file creation, `>>` append, and `<` reading. Three additional methods verify overwrite truncation and quoted filenames with subsequent output still visible, combined `<` and `>` on one external command, and recovery after missing input/unwritable output paths. Temporary directories isolate test files. Existing guard tests verify that built-in redirection cannot change directory, exit, or create a file. Pipeline/background guards remain exercised.
+
+Optional manual check: launch `/tmp/minishell-redirection-test` from a disposable directory in Ubuntu Bash. Inside mini-shell enter `echo first > output.txt`, `echo second >> output.txt`, `cat < output.txt`, `pwd`, and `exit`. Expect two lines (`first`, `second`), followed by the directory path on screen. Avoid reusing an output filename containing data you want to keep.
+
+Notes to keep: `>` creates or truncates the output file; `>>` appends; `<` selects the input file. The executor applies open/dup2 in the child process, so the parent shell's input/output and prompt remain unchanged. No last-command status reporting or general shell redirection syntax is added here; repeated redirects still follow the existing parser's single-input/single-output representation.
 
 ## Foreground integration draft — 2026-10-16
 
 Branch: `feature/executeCommandandtest`. Proposed PR target: `feature/process-execution`, which supplies Sami's executor through Git integration. No teammate files are copied into this branch. Single foreground external commands now call `executeCommand(command)` after built-in dispatch. Built-ins remain in the parent shell. Pipelines, redirection, and background execution remain rejected for this bounded step.
 
-Status: **Partial user runtime verification**. Executor files are now present and staged during the pending merge of Sami's branch. The user launched `/tmp/minishell-foreground-test`: `echo "hello world"` printed `hello world`, `sleep 2` returned to a prompt without a visible error, `pwd` printed `/mnt/c/Users/aygul/OneDrive/Desktop/OS/Minishell`, and `exit` returned to Bash. The transcript does not establish the sleep duration or include compilation/eleven-test output; those confirmations remain pending. The earlier nine passing tests apply to parser-only behavior, not this change. The suite now contains eleven tests: external execution with quotes and unknown-program recovery replaces rejection, plus foreground waiting and inherited-directory coverage. The draft must not be treated as ready to merge into main until the combined code is tested in Ubuntu.
+Status: **Passed — user-confirmed foreground waiting and all 11 integration tests, 2026-10-16**. The user confirmed that the prompt waited after `sleep 2` and that the automated suite passed; no detailed automated-test transcript or duration was supplied. The earlier manual transcript shows `echo "hello world"` printing `hello world`, `pwd` printing `/mnt/c/Users/aygul/OneDrive/Desktop/OS/Minishell`, and `exit` returning to Bash. Git inspection confirms the executor merge is complete in commit `c0ca022` (`Merge executor branch and record foreground integration results`). The suite covers external execution with quotes, unknown-program recovery, foreground waiting, inherited directories, and parser/built-in regressions. This verifies the bounded foreground scope, not pipeline, redirection, or background execution. PR review remains separate from these local test results.
 
 In a checkout containing both branches' code, run from Ubuntu Bash:
 

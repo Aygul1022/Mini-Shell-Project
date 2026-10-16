@@ -10,6 +10,8 @@ enum class BuiltinResult {
     ExitRequested
 };
 
+bool isBuiltin(const std::string& name);
+
 // args[0] is the command name. The caller must first check pipeline,
 // redirection, and background restrictions. Runs in the calling process.
 // Handled means the command was recognized, not necessarily successful.

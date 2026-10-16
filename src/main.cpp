@@ -3,6 +3,7 @@
 #include "parser/parser.h"
 #include "builtins/builtins.h"
 #include "process/executor.h"
+#include "process/pipeline_executor.h"
 
 using namespace std;
 
@@ -17,21 +18,37 @@ bool dispatchPipeline(const Pipeline& pipeline){
         return false;
     }
     if(pipeline.commands.size() > 1){
-        cerr << "mini-shell: pipelines await executor integration" << endl;
+        // Validate every stage before starting any process.
+        for(const Command& stage : pipeline.commands){
+            if(stage.args.empty() || stage.args[0].empty()){
+                cerr << "mini-shell: empty command name in pipeline" << endl;
+                return false;
+            }
+            if(isBuiltin(stage.args[0])){
+                cerr << "mini-shell: built-ins in pipelines are not supported yet" << endl;
+                return false;
+            }
+            if(!stage.inputFile.empty() || !stage.outputFile.empty()){
+                cerr << "mini-shell: redirection within pipelines awaits executor integration" << endl;
+                return false;
+            }
+        }
+        cout.flush();
+        executePipeline(pipeline);
         return false;
     }
 
     const Command& command = pipeline.commands.front();
-    if(!command.inputFile.empty() || !command.outputFile.empty()){
-        cerr << "mini-shell: redirection awaits executor integration" << endl;
-        return false;
-    }
     if(command.args.empty()){
         return false;
     }
     const string& name = command.args[0];
     if(name.empty()){
         cerr << "mini-shell: empty command name" << endl;
+        return false;
+    }
+    if(isBuiltin(name) && (!command.inputFile.empty() || !command.outputFile.empty())){
+        cerr << "mini-shell: redirection for built-ins is not supported yet" << endl;
         return false;
     }
     const BuiltinResult result = dispatchBuiltin(command.args);

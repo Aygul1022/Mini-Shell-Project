@@ -55,7 +55,12 @@ class ParserIntegrationTests(unittest.TestCase):
                 with self.subTest(command=command):
                     output, errors = self.run_shell(command + "\npwd\nexit\n", directory)
                     self.assertEqual(output.splitlines(), [str(pathlib.Path(directory).resolve())])
-                    self.assertIn("executor integration", errors)
+                    if command in ['cd / > output.txt', 'pwd < missing.txt', 'exit > output.txt']:
+                        self.assertIn("redirection for built-ins is not supported", errors)
+                    elif command in ['cd / | pwd', 'exit | pwd']:
+                        self.assertIn("built-ins in pipelines are not supported", errors)
+                    else:
+                        self.assertIn("executor integration", errors)
                     self.assertFalse((pathlib.Path(directory) / "output.txt").exists())
 
     def test_external_execution_and_recovery(self):
@@ -85,18 +90,76 @@ class ParserIntegrationTests(unittest.TestCase):
 
     def test_external_pipeline(self):
         with tempfile.TemporaryDirectory() as directory:
-            output, errors = self.run_shell("echo hello | cat | wc -c\nexit\n", directory)
-            self.assertEqual(output, "")
-            self.assertIn("pipelines await executor integration", errors)
+            for command in ["echo hello | wc -c", "echo hello | cat | wc -c"]:
+                with self.subTest(command=command):
+                    output, errors = self.run_shell(command + "\necho done\nexit\n", directory)
+                    self.assertEqual([line.strip() for line in output.splitlines()], ["6", "done"])
+                    self.assertEqual(errors, "")
+
+    def test_pipeline_large_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output, errors = self.run_shell("seq 1 100000 | cat | wc -l\nexit\n", directory)
+            self.assertEqual(output.strip(), "100000")
+            self.assertEqual(errors, "")
+
+    def test_pipeline_missing_program_recovery(self):
+        with tempfile.TemporaryDirectory() as directory:
+            missing = "minishell_nonexistent_command_72519"
+            for command in [missing + " | cat", "echo hi | " + missing]:
+                with self.subTest(command=command):
+                    output, errors = self.run_shell(command + "\necho recovered\nexit\n", directory)
+                    self.assertEqual(output.splitlines(), ["recovered"])
+                    self.assertIn(missing, errors)
+
+    def test_pipeline_validates_all_stages_before_execution(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for command in ['touch marker | pwd', 'touch marker | ""',
+                            'touch marker | cat > output.txt']:
+                with self.subTest(command=command):
+                    output, errors = self.run_shell(command + "\necho recovered\nexit\n", directory)
+                    self.assertEqual(output.splitlines(), ["recovered"])
+                    self.assertTrue(errors.strip())
+                    self.assertFalse((pathlib.Path(directory) / "marker").exists())
+                    self.assertFalse((pathlib.Path(directory) / "output.txt").exists())
 
     def test_external_redirection(self):
         with tempfile.TemporaryDirectory() as directory:
             output, errors = self.run_shell(
                 "echo first > output.txt\necho second >> output.txt\ncat < output.txt\nexit\n", directory,
             )
-            self.assertEqual(output, "")
-            self.assertFalse((pathlib.Path(directory) / "output.txt").exists())
-            self.assertEqual(errors.count("redirection awaits executor integration"), 3)
+            self.assertEqual(output.splitlines(), ["first", "second"])
+            self.assertEqual((pathlib.Path(directory) / "output.txt").read_text(), "first\nsecond\n")
+            self.assertEqual(errors, "")
+
+    def test_redirection_truncation_and_prompt_preservation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = pathlib.Path(directory) / "output with spaces.txt"
+            target.write_text("old content that must disappear\n")
+            output, errors = self.run_shell(
+                'echo new > "output with spaces.txt"\npwd\necho visible\nexit\n', directory,
+            )
+            self.assertEqual(target.read_text(), "new\n")
+            self.assertEqual(output.splitlines(), [str(pathlib.Path(directory).resolve()), "visible"])
+            self.assertEqual(errors, "")
+
+    def test_combined_input_output_redirection(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = pathlib.Path(directory) / "input.txt"
+            source.write_text("first\nsecond\n")
+            output, errors = self.run_shell("cat < input.txt > copy.txt\necho done\nexit\n", directory)
+            self.assertEqual((pathlib.Path(directory) / "copy.txt").read_text(), source.read_text())
+            self.assertEqual(output.splitlines(), ["done"])
+            self.assertEqual(errors, "")
+
+    def test_redirection_failure_recovery(self):
+        with tempfile.TemporaryDirectory() as directory:
+            for command in ["cat < absent.txt", "echo hidden > absent-dir/output.txt"]:
+                with self.subTest(command=command):
+                    output, errors = self.run_shell(command + "\necho recovered\npwd\nexit\n", directory)
+                    self.assertEqual(output.splitlines(), ["recovered", str(pathlib.Path(directory).resolve())])
+                    self.assertTrue(errors.strip())
+                    self.assertFalse((pathlib.Path(directory) / "absent.txt").exists())
+                    self.assertFalse((pathlib.Path(directory) / "absent-dir").exists())
 
     def test_argument_validation_and_empty_command(self):
         with tempfile.TemporaryDirectory() as directory:
