@@ -1,5 +1,6 @@
 #include "executor.h"
-
+#include <cerrno>
+#include <cstdio>
 #include <iostream>
 #include <vector>
 
@@ -90,5 +91,12 @@ void executeCommand(const Command& command) {
         _exit(127);
     }
 
-    waitpid(pid, nullptr, 0);
+    while (waitpid(pid, nullptr, 0) == -1) {
+    if (errno == EINTR) {
+        continue;
+    }
+
+    std::perror("waitpid failed");
+    break;
+}
 }

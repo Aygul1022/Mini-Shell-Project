@@ -1,10 +1,26 @@
 	#include "pipeline_executor.h"
-
+#include <cerrno>
+#include <cstdio>
 #include <iostream>
 #include <vector>
 
 #include <unistd.h>
 #include <sys/wait.h>
+
+namespace {
+
+void waitForChild(pid_t childPid) {
+    while (waitpid(childPid, nullptr, 0) == -1) {
+        if (errno == EINTR) {
+            continue;
+        }
+
+        std::perror("waitpid failed");
+        break;
+    }
+}
+
+}
 
 std::vector<char*> buildArgs(const Command& command) {
     std::vector<char*> args;
@@ -50,7 +66,7 @@ void executePipeline(const Pipeline& pipeline) {
                 }
 
                 for (pid_t childPid : childPids) {
-                    waitpid(childPid, nullptr, 0);
+                    waitForChild(childPid);
                 }
 
                 return;
@@ -72,7 +88,7 @@ void executePipeline(const Pipeline& pipeline) {
             }
 
             for (pid_t childPid : childPids) {
-                waitpid(childPid, nullptr, 0);
+                waitForChild(childPid);
             }
 
             return;
@@ -132,6 +148,6 @@ void executePipeline(const Pipeline& pipeline) {
     }
 
     for (pid_t childPid : childPids) {
-        waitpid(childPid, nullptr, 0);
+        waitForChild(childPid);
     }
 }
