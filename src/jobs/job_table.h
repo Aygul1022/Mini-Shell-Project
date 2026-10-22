@@ -2,6 +2,7 @@
 #define JOB_TABLE_H
 
 #include "job.h"
+#include <algorithm>
 #include <iostream>
 #include <vector>
 
@@ -10,6 +11,24 @@ class JobTable
 private:
     std::vector<Job> jobs;
     int nextJobId = 1;
+
+    static bool isValidProcessInfo(const std::vector<pid_t> &pids, pid_t pgid)
+    {
+        if (pids.empty() || pgid <= 0)
+        {
+            return false;
+        }
+
+        for (pid_t pid : pids)
+        {
+            if (pid <= 0)
+            {
+                return false;
+            }
+        }
+
+        return std::find(pids.begin(), pids.end(), pgid) != pids.end();
+    }
 
     static const char *statusToString(JobStatus status)
     {
@@ -32,6 +51,11 @@ public:
                const std::string &commandLine,
                bool background)
     {
+        if (!isValidProcessInfo(pids, pgid))
+        {
+            return 0;
+        }
+
         Job job;
 
         job.jobId = nextJobId++;
