@@ -1,10 +1,10 @@
-# Unix Mini-Shell Project
+# Linux Mini-Shell Project
 
 **COME 361 – Operating Systems Term Project**
 
 ## 1. Project Overview
 
-This project aims to develop a simplified Unix shell using **C++17** and **POSIX system calls**.
+This project aims to develop a simplified Linux shell using **C++17** and **POSIX system calls**.
 
 The Mini-Shell reads commands from the user, parses their arguments and operators, and executes supported commands in a Linux environment.
 
@@ -270,4 +270,4 @@ A working foreground Mini-Shell is available for demonstration. The next develop
 
 **COME 361 – Operating Systems Term Project**
 
-**Project:** Unix Mini-Shell Using C++ and POSIX System Calls
+**Project:** Linux Mini-Shell Using C++ and POSIX System Calls
