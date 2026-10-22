@@ -29,9 +29,9 @@ int main()
 
     assert(jobId == 1);
 
-    const Job *job = jobTable.findJob(jobId);
+    std::optional<Job> job = jobTable.findJob(jobId);
 
-    assert(job != nullptr);
+    assert(job.has_value());
     assert(job->pgid == 4231);
     assert(job->pids.size() == 2);
     assert(job->background == true);
@@ -39,17 +39,17 @@ int main()
 
     std::cout << "PASS: Add and find job\n";
 
-    const Job *firstProcessJob = jobTable.findJobByPid(4231);
-    const Job *secondProcessJob = jobTable.findJobByPid(4232);
-    const Job *unknownProcessJob = jobTable.findJobByPid(9999);
+    std::optional<Job> firstProcessJob = jobTable.findJobByPid(4231);
+    std::optional<Job> secondProcessJob = jobTable.findJobByPid(4232);
+    std::optional<Job> unknownProcessJob = jobTable.findJobByPid(9999);
 
-    assert(firstProcessJob != nullptr);
+    assert(firstProcessJob.has_value());
     assert(firstProcessJob->jobId == jobId);
 
-    assert(secondProcessJob != nullptr);
+    assert(secondProcessJob.has_value());
     assert(secondProcessJob->jobId == jobId);
 
-    assert(unknownProcessJob == nullptr);
+    assert(!unknownProcessJob.has_value());
 
     std::cout << "PASS: Find job by PID\n";
 
@@ -61,7 +61,7 @@ int main()
 
     job = jobTable.findJob(jobId);
 
-    assert(job != nullptr);
+    assert(job.has_value());
     assert(job->status == JobStatus::Stopped);
 
     std::cout << "PASS: Update job status\n";
@@ -69,8 +69,8 @@ int main()
     bool removed = jobTable.removeJob(jobId);
 
     assert(removed);
-    assert(jobTable.findJob(jobId) == nullptr);
-    assert(jobTable.findJobByPid(4231) == nullptr);
+    assert(!jobTable.findJob(jobId).has_value());
+    assert(!jobTable.findJobByPid(4231).has_value());
 
     std::cout << "PASS: Remove job\n";
 
@@ -99,19 +99,36 @@ int main()
 
     cleanupTable.removeDoneJobs();
 
-    assert(cleanupTable.findJob(doneId1) == nullptr);
-    assert(cleanupTable.findJob(doneId2) == nullptr);
+    assert(!cleanupTable.findJob(doneId1).has_value());
+    assert(!cleanupTable.findJob(doneId2).has_value());
 
-    const Job *runningJob = cleanupTable.findJob(runningId);
-    const Job *stoppedJob = cleanupTable.findJob(stoppedId);
+    std::optional<Job> runningJob = cleanupTable.findJob(runningId);
+    std::optional<Job> stoppedJob = cleanupTable.findJob(stoppedId);
 
-    assert(runningJob != nullptr);
+    assert(runningJob.has_value());
     assert(runningJob->status == JobStatus::Running);
 
-    assert(stoppedJob != nullptr);
+    assert(stoppedJob.has_value());
     assert(stoppedJob->status == JobStatus::Stopped);
 
     std::cout << "PASS: Remove completed jobs\n";
+
+    JobTable safetyTable;
+
+    int safetyId = safetyTable.addJob(
+        {6001}, 6001, "sleep 10 &", true);
+
+    std::optional<Job> savedJob = safetyTable.findJob(safetyId);
+
+    assert(savedJob.has_value());
+
+    safetyTable.removeJob(safetyId);
+
+    assert(!safetyTable.findJob(safetyId).has_value());
+    assert(savedJob->jobId == safetyId);
+    assert(savedJob->commandLine == "sleep 10 &");
+
+    std::cout << "PASS: Job copy remains valid after removal\n";
 
     return 0;
 }

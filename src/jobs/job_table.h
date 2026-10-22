@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <iostream>
 #include <vector>
+#include <optional>
 
 class JobTable
 {
@@ -70,33 +71,33 @@ public:
         return job.jobId;
     }
 
-    const Job *findJob(int jobId) const
+    std::optional<Job> findJob(int jobId) const
     {
         for (const Job &job : jobs)
         {
             if (job.jobId == jobId)
             {
-                return &job;
+                return job;
             }
         }
 
-        return nullptr;
+        return std::nullopt;
     }
 
-    const Job *findJobByPid(pid_t pid) const
+    std::optional<Job> findJobByPid(pid_t pid) const
     {
         for (const Job &job : jobs)
         {
-            for (pid_t processId : job.pids)
+            for (pid_t jobPid : job.pids)
             {
-                if (processId == pid)
+                if (jobPid == pid)
                 {
-                    return &job;
+                    return job;
                 }
             }
         }
 
-        return nullptr;
+        return std::nullopt;
     }
 
     bool updateJobStatus(int jobId, JobStatus newStatus)
