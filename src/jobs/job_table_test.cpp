@@ -5,6 +5,20 @@
 
 int main()
 {
+    JobTable validationTable;
+
+    assert(validationTable.addJob({}, 4231, "empty PID list", true) == 0);
+    assert(validationTable.addJob({4231}, -1, "invalid PGID", true) == 0);
+    assert(validationTable.addJob({0}, 4231, "invalid PID", true) == 0);
+    assert(validationTable.addJob({4231}, 9999, "PGID not in PID list", true) == 0);
+
+    int firstValidId = validationTable.addJob(
+        {4231}, 4231, "valid job", true);
+
+    assert(firstValidId == 1);
+
+    std::cout << "PASS: Reject invalid process information\n";
+
     JobTable jobTable;
 
     int jobId = jobTable.addJob(
