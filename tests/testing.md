@@ -1,5 +1,11 @@
 # Mini Shell test record
 
+## Demo rehearsal — 2026-10-22
+
+Status: **Expected visible results confirmed by user-pasted Ubuntu transcript; user reports success**. The user launched `/tmp/minishell-demo` in a directory created with `mktemp -d` (`/tmp/tmp.NPARZYBwyI`). Help displayed current capabilities and limitations. `pwd` printed the temporary directory, quoted echo printed `Hello from our Mini Shell`, and `sleep 5` returned to a prompt without a visible error (duration was not captured). Output creation and append followed by `cat < output.txt` printed `first` and `second`. `echo hello | cat | wc -c` printed `6`. `cd ..` followed by `pwd` printed `/tmp`.
+
+The transcript ends with `exit SUCCESFULL`; the user's success report is recorded, but the text does not distinguish the annotation from literal input or show the final Bash prompt. For the live demo, type only `exit`. Build output and a fresh 17-test run were not included in this rehearsal transcript; earlier test results remain recorded below. This rehearsal demonstrates the supported foreground feature set, not background jobs or pipeline redirection.
+
 Current scope is **Foreground external pipelines** below. Subsequent development sections are historical records; their build commands and expectations may be superseded.
 
 ## Foreground external pipelines — 2026-10-16
