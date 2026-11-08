@@ -1,5 +1,75 @@
 # Mini Shell test record
 
+## UI terminal session prototype
+
+Scope: uncommitted `src/ui/session` component and `tests/ui_session` host.
+UI-ENV: **Passed**, user-pasted Ubuntu 26.04 output: CMake 4.2.3,
+Qt6Widgets 6.10.2, and pkg-config identifier `qtermwidget6` found.
+Graphical operation subsequently confirmed by the user's window and command tests.
+
+UI-BUILD initial attempt: **Blocked** by missing development dependency. User-pasted Ubuntu
+output shows CMake configuration failed because `libutf8proc`, required by
+`qtermwidget6`, was not found. The subsequent missing Makefile and executable
+errors follow from this configuration failure. Initial package discovery
+above proved only that qtermwidget6 was listed, not that its dependencies resolved.
+Remedy supplied: `sudo apt install libutf8proc-dev`, then rerun configuration
+and build. User subsequently reported that the window opened and all requested
+interactive checks succeeded. UI-BUILD recovery: **Passed by user-reported
+successful launch after rebuild instructions**; no subsequent compiler transcript
+was supplied, so compiler diagnostics are not independently verified.
+
+UI-01, UI-02, UI-03, UI-04, UI-06: **Passed — user-reported confirmation**.
+The user confirmed the preceding checklist: prompt and echo output, persistent
+`cd /tmp` followed by `pwd`, responsive resizing during `sleep 2`, and refusal
+to close an active session. They explicitly reported the final message
+"Session ended. You can close this window." and successfully closed the window.
+UI-05: **Passed — user-reported confirmation for both subcases**.
+The user confirmed that both the missing-file and non-executable-file tests
+displayed "Cannot start Mini Shell", closed after OK, and returned exit status
+`1` as checked with `echo $?`. This clarification resolves the earlier
+uncertainty about which input was tested. All UI-01 through UI-06 checks for
+this first checkpoint are now passed by user report; full job control and
+active-process cleanup remain outside its scope.
+Existing shell regression suite: **Passed**, user-pasted output reports
+17 tests in 1.279s, final `OK`, using `/tmp/minishell-ui-core`.
+Agent inspected the API against QTermWidget 2.3.0; no agent Ubuntu build performed.
+
+Run in Ubuntu Bash:
+
+```bash
+cd /mnt/c/Users/aygul/OneDrive/Desktop/OS/Minishell
+sudo apt install libutf8proc-dev
+g++ -std=c++17 -Wall -Wextra -Wpedantic src/main.cpp src/builtins/builtins.cpp src/parser/parser.cpp src/parser/tokenizer.cpp src/process/executor.cpp src/process/pipeline_executor.cpp -o /tmp/minishell-ui-core
+cmake -S tests/ui_session -B /tmp/minishell-ui-build
+cmake --build /tmp/minishell-ui-build
+python3 tests/parser_integration_test.py /tmp/minishell-ui-core
+/tmp/minishell-ui-build/minishell-session-test /tmp/minishell-ui-core
+```
+
+Stop if any build command fails. Expected: both executables build, existing
+regression suite passes, and a graphical window opens.
+
+| ID | Action in graphical terminal | Expected |
+| --- | --- | --- |
+| UI-01 | Open window, enter `echo hello` | Prompt appears; output is `hello` |
+| UI-02 | Enter `cd /tmp`, then `pwd` | Output `/tmp`; same shell session persists |
+| UI-03 | Enter `sleep 2`; resize window during wait | Window responds; prompt returns after command |
+| UI-04 | Enter `exit` | Status says session ended; window can be closed |
+| UI-05 | Launch with `/tmp/minishell-does-not-exist` instead of executable | Error dialog; after dismissal process returns 1 (check `echo $?` in Bash) |
+| UI-06 | Try closing while session is active | Window stays open; status asks for `exit`; exit then close works |
+
+Also test UI-05 with a non-executable temporary file created by `mktemp`.
+This checks permission validation without modifying the shell binary.
+
+Learning notes: the GUI event loop and shell process run separately;
+QTermWidget owns PTY handling. `start()` success means preflight passed and
+launch was requested, not verified exec success. A missing runtime loader or
+other launch failure may appear in terminal output. Session-ended notification
+does not distinguish a normal exit from a crash. Full Ctrl+C/job control and
+closing an active process tree remain outside this checkpoint. The prototype
+blocks ordinary window closure until the session ends.
+
+
 ## Demo rehearsal — 2026-10-22
 
 Status: **Expected visible results confirmed by user-pasted Ubuntu transcript; user reports success**. The user launched `/tmp/minishell-demo` in a directory created with `mktemp -d` (`/tmp/tmp.NPARZYBwyI`). Help displayed current capabilities and limitations. `pwd` printed the temporary directory, quoted echo printed `Hello from our Mini Shell`, and `sleep 5` returned to a prompt without a visible error (duration was not captured). Output creation and append followed by `cat < output.txt` printed `first` and `second`. `echo hello | cat | wc -c` printed `6`. `cd ..` followed by `pwd` printed `/tmp`.
