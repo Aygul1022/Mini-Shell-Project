@@ -1,10 +1,10 @@
 #include "executor.h"
+#include "redirection.h"
 #include <cerrno>
 #include <cstdio>
 #include <iostream>
 #include <vector>
 
-#include <fcntl.h>
 #include <unistd.h>
 #include <sys/wait.h>
 
@@ -30,57 +30,8 @@ int executeCommand(const Command& command) {
     }
 
     if (pid == 0) {
-
-        // < input redirection
-        if (!command.inputFile.empty()) {
-            int inputFd = open(
-                command.inputFile.c_str(),
-                O_RDONLY
-            );
-
-            if (inputFd == -1) {
-                std::cerr << "Failed to open Input file!" << std::endl;
-                _exit(1);
-            }
-
-            if (dup2(inputFd, STDIN_FILENO) == -1) {
-                std::cerr << "Input dup2() failed!" << std::endl;
-                close(inputFd);
-                _exit(1);
-            }
-
-            close(inputFd);
-        }
-
-        // > veya >> output redirection
-        if (!command.outputFile.empty()) {
-            int flags = O_WRONLY | O_CREAT;
-
-            if (command.appendOutput) {
-                flags |= O_APPEND;
-            }
-            else {
-                flags |= O_TRUNC;
-            }
-
-            int outputFd = open(
-                command.outputFile.c_str(),
-                flags,
-                0644
-            );
-
-            if (outputFd == -1) {
-                std::cerr << "Failed to open Output file!" << std::endl;
-                _exit(1);
-            }
-
-            if (dup2(outputFd, STDOUT_FILENO) == -1) {
-                std::cerr << "Output dup2() failed!" << std::endl;
-                close(outputFd);
-                _exit(1);
-            }
-
-            close(outputFd);
+        if (!process::applyRedirections(command)) {
+            _exit(1);
         }
 
         execvp(args[0], args.data());

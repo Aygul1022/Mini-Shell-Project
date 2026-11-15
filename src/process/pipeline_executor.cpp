@@ -1,4 +1,5 @@
 #include "pipeline_executor.h"
+#include "redirection.h"
 #include <cerrno>
 #include <cstdio>
 #include <iostream>
@@ -107,11 +108,19 @@ int executePipeline(const Pipeline& pipeline) {
         }
 
         if (pid == 0) {
+            if (hasNextCommand) {
+                close(pipefd[0]);
+            }
+
             if (previousReadFd != -1) {
                 if (dup2(previousReadFd, STDIN_FILENO) == -1) {
                     std::cerr << "stdin dup2() failed!"
                               << std::endl;
                     _exit(1);
+                }
+
+                if (previousReadFd != STDIN_FILENO) {
+                    close(previousReadFd);
                 }
             }
 
@@ -121,24 +130,23 @@ int executePipeline(const Pipeline& pipeline) {
                               << std::endl;
                     _exit(1);
                 }
+                if (pipefd[1] != STDOUT_FILENO) {
+                    close(pipefd[1]);
+                }
             }
 
-            if (previousReadFd != -1) {
-                close(previousReadFd);
+            const Command& command = pipeline.commands[i];
+            // Explicit redirections override the pipe connections for this stage.
+            if (!process::applyRedirections(command)) {
+                _exit(1);
             }
 
-            if (hasNextCommand) {
-                close(pipefd[0]);
-                close(pipefd[1]);
-            }
-
-            std::vector<char*> args =
-                buildArgs(pipeline.commands[i]);
+            std::vector<char*> args = buildArgs(command);
 
             execvp(args[0], args.data());
 
             std::cerr << "Command execution failed: "
-                      << pipeline.commands[i].args[0]
+                      << command.args[0]
                       << std::endl;
 
             _exit(127);
