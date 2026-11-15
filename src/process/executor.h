@@ -3,6 +3,6 @@
 
 #include "../command.h"
 
-void executeCommand(const Command& command);
+int executeCommand(const Command& command);
 
 #endif

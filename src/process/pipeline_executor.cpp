@@ -1,4 +1,4 @@
-	#include "pipeline_executor.h"
+#include "pipeline_executor.h"
 #include <cerrno>
 #include <cstdio>
 #include <iostream>
@@ -9,18 +9,30 @@
 
 namespace {
 
-void waitForChild(pid_t childPid) {
-    while (waitpid(childPid, nullptr, 0) == -1) {
+int waitForChild(pid_t childPid) {
+    int status = 0;
+
+    while (waitpid(childPid, &status, 0) == -1) {
         if (errno == EINTR) {
             continue;
         }
 
         std::perror("waitpid failed");
-        break;
+        return 1;
     }
+
+    if (WIFEXITED(status)) {
+        return WEXITSTATUS(status);
+    }
+
+    if (WIFSIGNALED(status)) {
+        return 128 + WTERMSIG(status);
+    }
+
+    return 1;
 }
 
-}
+} // namespace
 
 std::vector<char*> buildArgs(const Command& command) {
     std::vector<char*> args;
@@ -34,16 +46,16 @@ std::vector<char*> buildArgs(const Command& command) {
     return args;
 }
 
-void executePipeline(const Pipeline& pipeline) {
+int executePipeline(const Pipeline& pipeline) {
     if (pipeline.commands.empty()) {
         std::cerr << "Pipeline can not be empty" << std::endl;
-        return;
+        return 1;
     }
 
     for (const auto& command : pipeline.commands) {
         if (command.args.empty()) {
             std::cerr << "Empty command can not be executed." << std::endl;
-            return;
+            return 1;
         }
     }
 
@@ -69,7 +81,7 @@ void executePipeline(const Pipeline& pipeline) {
                     waitForChild(childPid);
                 }
 
-                return;
+                return 1;
             }
         }
 
@@ -91,7 +103,7 @@ void executePipeline(const Pipeline& pipeline) {
                 waitForChild(childPid);
             }
 
-            return;
+            return 1;
         }
 
         if (pid == 0) {
@@ -147,7 +159,11 @@ void executePipeline(const Pipeline& pipeline) {
         }
     }
 
+    int lastStatus = 1;
+
     for (pid_t childPid : childPids) {
-        waitForChild(childPid);
+        lastStatus = waitForChild(childPid);
     }
+
+    return lastStatus;
 }

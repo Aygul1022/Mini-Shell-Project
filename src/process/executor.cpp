@@ -8,10 +8,10 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
-void executeCommand(const Command& command) {
+int executeCommand(const Command& command) {
     if (command.args.empty()) {
         std::cerr << "Empty command cannot be executed." << std::endl;
-        return;
+        return 1;
     }
 
     std::vector<char*> args;
@@ -26,7 +26,7 @@ void executeCommand(const Command& command) {
 
     if (pid < 0) {
         std::cerr << "fork() failed!" << std::endl;
-        return;
+        return 1;
     }
 
     if (pid == 0) {
@@ -91,12 +91,24 @@ void executeCommand(const Command& command) {
         _exit(127);
     }
 
-    while (waitpid(pid, nullptr, 0) == -1) {
-    if (errno == EINTR) {
-        continue;
+    int status = 0;
+
+    while (waitpid(pid, &status, 0) == -1) {
+        if (errno == EINTR) {
+            continue;
+        }
+
+        std::perror("waitpid failed");
+        return 1;
     }
 
-    std::perror("waitpid failed");
-    break;
-}
+    if (WIFEXITED(status)) {
+        return WEXITSTATUS(status);
+    }
+
+    if (WIFSIGNALED(status)) {
+        return 128 + WTERMSIG(status);
+    }
+
+    return 1;
 }

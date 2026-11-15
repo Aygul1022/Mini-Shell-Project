@@ -3,6 +3,6 @@
 
 #include "../command.h"
 
-void executePipeline(const Pipeline& pipeline);
+int executePipeline(const Pipeline& pipeline);
 
 #endif
